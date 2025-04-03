@@ -35,20 +35,3 @@ dim_text() {
 reset_color() {
 	printf "\e[0m"
 }
-
-draw_rect() {
-	local x="$1"
-	local y="$2"
-	local width="$3"
-	local height="$4"
-	local color="$5"
-	local spaces=$(printf "%${width}s")
-
-	set_bg_color $color
-	for ((i=0; i<height; i++)); do
-		move_cursor $x $y
-		printf "$spaces"
-		y=$((y+1))
-	done
-	reset_color
-}
