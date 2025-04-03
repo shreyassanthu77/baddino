@@ -7,7 +7,7 @@ main() {
 	hide_cursor
 	enable_altmode
 	enable_raw_mode
-	local frame_time=$(echo "scale=2; 1/75" | bc)
+	local frame_time=$(echo "scale=2; 1/60" | bc)
 
 	WIDTH=$(tput cols)
 	HEIGHT=$(tput lines)
@@ -127,7 +127,7 @@ main() {
 		reset_color
 
 		move_cursor 0 2
-		printf "Cactus speed: $cactus_speed"
+		printf "Cactus speed: %0.2f" $cactus_speed
 
 		draw_platform $platform_height
 		draw_dino ${dino[0]} ${dino[1]} ${dino[4]}
