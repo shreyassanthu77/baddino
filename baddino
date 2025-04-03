@@ -1,0 +1,114 @@
+#!/bin/env bash
+source ./term.sh
+source ./utils.sh
+
+main() {
+	hide_cursor
+	enable_altmode
+	enable_raw_mode
+	clear_screen
+	move_cursor 0 0
+	local frame_time=0.016
+
+
+	WIDTH=$(tput cols)
+	HEIGHT=$(tput lines)
+	local platform_height=3
+	local ground_y=$((HEIGHT-platform_height))
+
+	# x y width height color vy on_ground
+	local dino=(
+		$((WIDTH/2-2))
+		$((ground_y-2+1)) 
+		4 2 $BLUE
+		0 1
+	)
+
+	local gravity=0.3
+	local jump_speed=2
+
+	while true; do
+		read_key $frame_time
+
+		if [[ "$key" == "w" && ${dino[6]} -eq 1 ]]; then
+			# dino.vy = -jump_speed
+			dino[5]=$((-jump_speed))
+			# dino.on_ground = false
+			dino[6]=0
+		fi
+
+		# if not dino.on_ground:
+		if [[ ${dino[6]} -eq 0 ]]; then
+			# dino.vy += gravity
+			dino[5]=$(echo "${dino[5]} + $gravity" | bc)
+		fi
+
+		# dino.y += dino.vy
+		dino[1]=$(echo "scale=0; (${dino[1]} + ${dino[5]})/1" | bc)
+		# if int(dino.y) >= ground_y-dino.height:
+		if [[ ${dino[1]%.*} -ge $((ground_y+1-dino[3])) ]]; then
+			# dino.y = ground_y-dino.height
+			dino[1]=$((ground_y+1-dino[3]))
+			# dino.vy = 0
+			dino[5]=0
+			# dino.on_ground = true
+			dino[6]=1
+		fi
+
+
+		clear_screen
+		move_cursor 0 0
+		draw_title
+		draw_platform $platform_height
+		draw_rect ${dino[@]} 
+	done
+
+	quit
+}
+
+title="\n
+    __              __       ___           \n
+   / /_  ____ _____/ /  ____/ (_)___  ____ \n
+   / __ \\/ __ ./ __  /  / __  / / __ \\/ __ \\ \n
+ / /_/ / /_/ / /_/ /  / /_/ / / / / / /_/ /\n
+/_.___/\\__,_/\\__,_/   \\__,_/_/_/ /_/\\____/ \n
+Dino but badcop style
+"
+title_line_x=(0 0 0 0 0 0 0 0)
+draw_title() {
+	move_cursor 0 0
+	# looop through each line
+	local l=0
+	set_fg_color $YELLOW
+	dim_text
+	while IFS= read -r line; do
+		if [[ ${title_line_x[$l]} -eq 0 ]]; then
+			local line_width=$(measure_text "$line")
+			local x=$((WIDTH/2-line_width/2))
+			title_line_x[$l]=$x
+			move_cursor 0 $((l+1))
+		fi
+
+		move_cursor ${title_line_x[$l]} $((l+1))
+		printf "$line"
+		l=$((l+1))
+	done <<< "$title"
+	reset_color
+}
+
+draw_platform() {
+	local platform_height="$1"
+	local width_spaces=$(printf "%${WIDTH}s")
+
+	set_bg_color_rgb 78 45 31
+
+	# set_bg_color $GRAY
+	dim_text
+	for ((i=((HEIGHT-platform_height+1)); i<=HEIGHT; i++)); do
+		move_cursor 0 $i
+		printf "$width_spaces"
+	done
+	reset_color
+}
+
+main
