@@ -50,6 +50,21 @@ clear_screen() {
   printf '\e[2J' # clear screen
 }
 
+clear_rect() {
+	local x=$(($1 - 2))
+	if [[ $x -lt 0 ]]; then
+		x=0
+	fi
+	local y=$2
+	local width=$(($3 + 4))
+	local height=$4
+	local clear_text=$(printf "%${width}s")
+	for ((i=0; i<height; i++)); do
+		move_cursor $x $((y+i))
+		printf "$clear_text"
+	done
+}
+
 move_cursor() {
 	local x=$1
 	local y=$2

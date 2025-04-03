@@ -36,8 +36,13 @@ main() {
 	local score=0
 	local scored=0
 
+	local old_dino=""
+	local old_cactus=""
+
 	while true; do
 		read_key $frame_time
+		old_dino="${dino[@]}"
+		old_cactus="${cactus[@]}"
 
 		if [[ "$key" == "w" && ${dino[6]} -eq 1 ]]; then
 			# dino.vy = -jump_speed
@@ -108,6 +113,7 @@ main() {
 			gravity=$(echo "scale=2; ($cactus_speed / 2)" | bc)
 			score=0
 			scored=0
+			clear_screen
 			continue
 		elif (( cactus[0] + cactus[2] < dino[0] && scored == 0 )); then
 			score=$((score+1))
@@ -115,7 +121,9 @@ main() {
 		fi
 
 		set_bg_color_rgb 4 9 22
-		clear_screen
+		# clear_screen_alt 10 $((HEIGHT-platform_height))
+		clear_rect $old_dino
+		clear_rect $old_cactus
 		draw_title
 		reset_color
 
