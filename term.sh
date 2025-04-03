@@ -34,7 +34,13 @@ quit() {
 
 read_key() {
 	local timeout="$1"
-  read -n 1 -s -t $timeout key
+
+	if [[ $(echo "$timeout > 0" | bc) -eq 1 ]]; then
+		read -t $timeout -s -n 1   key
+	else
+		read -n 1 -s key
+	fi
+
 	if [[ "$key" == $'q' ]]; then 
 		quit
 	fi

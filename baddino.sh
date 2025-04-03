@@ -2,6 +2,7 @@
 source ./term.sh
 source ./utils.sh
 
+
 main() {
 	hide_cursor
 	enable_altmode
@@ -12,13 +13,6 @@ main() {
 	HEIGHT=$(tput lines)
 	local platform_height=4
 	local ground_y=$((HEIGHT-platform_height))
-
-	# x y speed size
-	local clouds=(
-    $((RANDOM % WIDTH)) $((RANDOM % 5 + 10)) 0.2 "small"
-    $((RANDOM % WIDTH)) $((RANDOM % 4 + 9)) 0.15 "medium"
-    $((RANDOM % WIDTH)) $((RANDOM % 3 + 4)) 0.1 "large"
-	)
 
 	# x y width height color vy on_ground
 	local dino=(
@@ -94,18 +88,27 @@ main() {
 			fi
 		fi
 
-		for ((i=0; i<3; i++)); do
-			local idx=$((i*4))
-			clouds[$idx]=$(echo "${clouds[$idx]} - ${clouds[$idx+2]}" | bc)
-			
-			if [[ $(echo "${clouds[$idx]} < -10" | bc) -eq 1 ]]; then
-					clouds[$idx]=$WIDTH
-					clouds[$idx+1]=$((RANDOM % 5 + 2))
-			fi
-		done
-
 		if check_collision ${dino[@]} ${cactus[@]}; then
-			break
+			draw_game_over
+			read_key 0
+			# reset state
+			dino=(
+				$((WIDTH/2-2))
+				$((ground_y-2+1)) 
+				4 2 $BLUE
+				0 1
+			)
+			cactus=(
+				$((WIDTH-2))
+				$((ground_y-4+1)) 
+				2 4 $GREEN
+			)
+			cactus_speed=0.5
+			jump_speed=$(echo "($cactus_speed * 4)/1" | bc)
+			gravity=$(echo "scale=2; ($cactus_speed / 2)" | bc)
+			score=0
+			scored=0
+			continue
 		elif (( cactus[0] + cactus[2] < dino[0] && scored == 0 )); then
 			score=$((score+1))
 			scored=1
@@ -115,10 +118,6 @@ main() {
 		clear_screen
 		draw_title
 		reset_color
-		for ((i=0; i<3; i++)); do
-			local idx=$((i*4))
-			draw_cloud ${clouds[$idx]%.*} ${clouds[$idx+1]} "${clouds[$idx+3]}"
-		done
 
 		move_cursor 0 1
 		if [[ $scored -eq 1 ]]; then
@@ -126,6 +125,9 @@ main() {
 		fi
 		printf "Score: $score"
 		reset_color
+
+		move_cursor 0 2
+		printf "Cactus speed: $cactus_speed"
 
 		draw_platform $platform_height
 		draw_dino ${dino[0]} ${dino[1]} ${dino[4]}
@@ -192,29 +194,47 @@ draw_cactus() {
     reset_color
 }
 
-draw_cloud() {
-    local x="$1"
-    local y="$2"
-    local size="$3" 
-    
-    set_fg_color $GRAY
-    
-    if [ "$size" == "small" ]; then
-        move_cursor $x $y
-        echo -n "░░"
-    elif [ "$size" == "medium" ]; then
-        move_cursor $x $y
-        echo -n "░░░"
-        move_cursor $x $((y+1))
-        echo -n " ░░"
-    else  # large
-        move_cursor $x $y
-        echo -n " ░░░░"
-        move_cursor $x $((y+1))
-        echo -n "░░░░░"
-    fi
-    
-    reset_color
+
+game_over="   _____                         ____                 \n
+  / ____|                       / __ \\                \n
+ | |  __  __ _ _ __ ___   ___  | |  | |_   _____ _ __ \n
+ | | |_ |/ _' | '_ ' _ \\ / _ \\ | |  | \\ \\ / / _ \\ '__|\n
+ | |__| | (_| | | | | | |  __/ | |__| |\\ V /  __/ |   \n
+  \\_____|\\__,_|_| |_| |_|\\___|  \\____/  \\_/ \\___|_|   \n
+"
+game_over_line_x=(0 0 0 0 0)
+draw_game_over() {
+	set_bg_color_rgb 4 9 22
+	clear_screen
+
+	set_fg_color $RED
+	local l=$((HEIGHT/2-7))
+	while IFS= read -r line; do
+		if [[ ${game_over_line_x[$l]} -eq 0 ]]; then
+			local line_width=$(measure_text "$line")
+			local x=$((WIDTH/2-line_width/2))
+			game_over_line_x[$l]=$x
+			move_cursor 0 $((l+1))
+		fi
+
+		move_cursor ${game_over_line_x[$l]} $((l+1))
+		printf "$line"
+		l=$((l+1))
+	done <<< "$game_over"
+
+	local score_text="Score: $score"
+	local score_width=$(measure_text "$score_text")
+
+	set_fg_color $YELLOW
+	move_cursor $((WIDTH/2-score_width/2)) $((l+1))
+	printf "$score_text"
+
+	local try_again_text="Press q to quit or any other key to restart"
+	local try_again_width=$(measure_text "$try_again_text")
+	move_cursor $((WIDTH/2-try_again_width/2)) $((l+2))
+	printf "$try_again_text"
+
+	reset_color
 }
 
 title="\n
